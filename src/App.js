@@ -23,7 +23,8 @@ class App extends React.Component {
         this.worker = React.createRef();
         this.updateProgressAndLog = this.updateProgressAndLog.bind(this);
     }
-
+ 
+     
 
     async doOCR(file) {
         this.setState({
@@ -31,6 +32,8 @@ class App extends React.Component {
             ocrText: '',
             nameArray: "",
             PancardNumber: "",
+            Name:"",
+            FatherName:"",
             dob: "",
             pctg: '0.00'
         })
@@ -45,27 +48,77 @@ class App extends React.Component {
 
 
         console.log(text,'this is the whole text')
+        let textArray=text.split("\n");
         let removetext = text.replace(/[^a-zA-Z0-9 ]/g, '');
         console.log(removetext,"remove text")
+
         let resulttext = removetext.split("\n");
         console.log(resulttext, "this is the result text")
+
         let panCardRegex = /[A-Za-z]{5}\d{4}[A-Za-z]{1}/g
         let dobregex = /^([0-9]{2})\/([0-9]{2})\/([0-9]{4})$/
 
         let namepattern =/^[A-Za-z]+([\ A-Za-z]+)*/mg
 
        
-        let patterns = text.match(namepattern);
+        let patterns = textArray;
         console.log("name pattern",patterns)
+        let user_Name = ""
+        let father_name = ""
+        let count=0;
+        let dateofbirth;
+        let dateofbirthnumber;
+        for (let i = 0; i < patterns.length; i++) {
+            console.log(patterns[i].match(/[0-9]+/gm),'checking')
+              
+ 
+            if(patterns[i].match(/((0|1)[0-9]|2[0-9]|3[0-1])\/(0[1-9]|1[0-2])\/((19|20)\d\d)/gm))
+            {
+                console.log("dob")
+                dateofbirth=patterns[i];
+            }
+
+
+            if(patterns[i].match(/[0-9]+/gm))
+            {
+                
+
+                if(patterns[i].match(/[0-9]+/gm)[0].length==10)
+                {
+                    dateofbirthnumber=patterns[i].match(/[0-9]+/gm)[0]
+                }
+            }
+
+            if (patterns[i].indexOf("INCOMETAX") > 0 || patterns[i].indexOf("TAX")>0 || patterns[i].indexOf("DEPARTMENT")>0 || patterns[i].indexOf("DEPARTMENT") > 0 && patterns[i].indexOf("Number")>0 || patterns[i].indexOf("Account")>0 || patterns[i].indexOf("Permanent")>0 || patterns[i].indexOf["name"]>0  || patterns[i].indexOf("Father's")>0 || patterns[i].indexOf("@")>0) {
+                continue;
+            }
+             else if (patterns[i].match(/^[A-Za-z][A-Za-z\'\-]+([\ A-Za-z][A-Za-z\'\-]+)*/g )   && i>0) {
+                if (!user_Name) {
+                    user_Name=  patterns[i].match(/^[A-Za-z][A-Za-z\'\-]+([\ A-Za-z][A-Za-z\'\-]+)*/gm) 
+                  
+                }
+                else  if(!father_name){
+                    father_name=patterns[i].match(/^[A-Za-z][A-Za-z\'\-]+([\ A-Za-z][A-Za-z\'\-]+)*/gm) 
+                }
+                 
+            }
+        }
+
+        
         let PancardNumber = text.match(panCardRegex);
-        let dob = text.match(dobregex);
-        let array = dob && dob[0].split("")
+       
+        console.log(dateofbirthnumber,'here')
+        let array = dateofbirthnumber && dateofbirthnumber.split("");
+
+        let arraystring;
         if (array && array.length >= 1) {
             array[2] = "/";
             array[5] = "/"
-            array.join("")
+            arraystring=  array.join("")
         }
-        let resultdob = array
+
+        console.log(arraystring)
+        let resultdob = arraystring && arraystring.replace(",","")
 
 
 
@@ -73,8 +126,10 @@ class App extends React.Component {
             isProcessing: false,
             PancardNumber: PancardNumber,
             nameArray: patterns,
-            dob: resultdob && resultdob,
-            ocrText: text
+            dob: resultdob   || dateofbirth,
+            ocrText: text,
+            FatherName:father_name,
+            Name:user_Name
         })
     };
     updateProgressAndLog(m) {
@@ -105,6 +160,7 @@ class App extends React.Component {
     render() {
         return (
             <div className="App">
+                <h1 style={{background:"white"}}>Image to text Detection</h1>
                 <div className="container">
                     <div style={{ marginTop: "10%" }} className="row">
                         <div className="col-md-4">
@@ -112,6 +168,7 @@ class App extends React.Component {
                         </div>
                         <div className="col-md-4">
                             <FilePond ref={ref => this.pond = ref}
+                            id="filepond"
                                 onaddfile={(err, file) => {
                                     this.doOCR(file);
 
@@ -138,20 +195,19 @@ class App extends React.Component {
 
                         </h5>
                         <div class="card-body">
-                            <p class="card-text">{(this.state.isProcessing) ?
-                                'Fetching main text.........'
-                                : this.state.ocrText.length === 0 ? "No Valid Text Found / Upload Image to Parse Text From Image" : this.state.ocrText}</p>
-
-
-                            <p class="card-text">{(this.state.isProcessing) ?
+                              <p class="card-text" id="pan">{(this.state.isProcessing) ?
                                 'Fetching pen card Number ........'
-                                : this.state.PancardNumber && this.state.PancardNumber.length === 0 ? "No Valid Text Found / Upload Image to Parse Text From Image" : this.state.PancardNumber}</p>
-                            <p class="card-text">{(this.state.isProcessing) ?
+                                : !this.state.PancardNumber ? "Not able to read text Please upload clear picture" : `Pan Card Number :${this.state.PancardNumber}`}</p>
+                            <p class="card-text" id="dob">{(this.state.isProcessing) ?
                                 'Fteching DOB ......'
-                                : this.state.dob && this.state.dob.length === 0 ? "No Valid Text Found / Upload Image to Parse Text From Image" : this.state.dob}</p>
-                            <p class="card-text">{(this.state.isProcessing) ?
+                                : !this.state.dob ? "Not able to read text Please upload clear picture" : `Date of birth: ${this.state.dob}`}</p>
+                            <p class="card-text" id="fathername">{(this.state.isProcessing) ?
+                                'Fetching Father Name...........'
+                                :  !this.state.FatherName ? "Not able to read text Please upload clear picture" : ` Father Name: ${this.state.FatherName}`}</p>
+
+                                 <p class="card-text" id="name">{(this.state.isProcessing) ?
                                 '...........'
-                                : this.state.nameArray && this.state.nameArray.length === 0 ? "No Valid Text Found / Upload Image to Parse Text From Image" : this.state.nameArray}</p>
+                                :  !this.state.Name ? "Not able to read text Please upload clear picture" : ` Name: ${this.state.Name}`}</p>
                         </div>
                     </div>
 
